@@ -51,14 +51,4 @@ public class MailEntity {
     public int hashCode() {
         return Objects.hash(id, mailType, recipientIndex, recipientAddress, recipientName);
     }
-
-    @Override
-    public String toString() {
-        return "MailEntity{" +
-                "mailType=" + mailType +
-                ", recipientIndex=" + recipientIndex +
-                ", recipientAddress='" + recipientAddress + '\'' +
-                ", recipientName='" + recipientName + '\'' +
-                '}';
-    }
 }
