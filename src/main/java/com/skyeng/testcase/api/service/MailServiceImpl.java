@@ -1,15 +1,13 @@
 package com.skyeng.testcase.api.service;
 
 
+import com.skyeng.testcase.api.dto.MailDto;
 import com.skyeng.testcase.api.dto.MailStateDto;
 import com.skyeng.testcase.api.exceptions.BadRequestException;
 import com.skyeng.testcase.api.repositories.MailRepo;
 import com.skyeng.testcase.api.repositories.MailStateRepo;
 import com.skyeng.testcase.api.repositories.PostRepo;
-import com.skyeng.testcase.model.MailEntity;
-import com.skyeng.testcase.model.MailStateEntity;
-import com.skyeng.testcase.model.MailStateType;
-import com.skyeng.testcase.model.MailType;
+import com.skyeng.testcase.model.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
@@ -33,13 +31,13 @@ public class MailServiceImpl implements MailService {
 
     @Override
     @Transactional
-    public MailEntity registerMail(MailType mailType, int recipientIndex, String recipientAddress, String recipientName) {
+    public MailEntity registerMail(MailDto mailDto) {
 
         MailEntity mail = MailEntity.builder()
-                .mailType(mailType)
-                .recipientAddress(recipientAddress)
-                .recipientIndex(recipientIndex)
-                .recipientName(recipientName)
+                .mailType(mailDto.getMailType())
+                .recipientAddress(mailDto.getAddress())
+                .recipientIndex(mailDto.getIndex())
+                .recipientName(mailDto.getName())
                 .build();
 
         mailRepo.saveAndFlush(mail);
@@ -54,9 +52,10 @@ public class MailServiceImpl implements MailService {
     }
 
     @Override
-    public MailStateDto getCurrentStatus(Long mailId) {
+    public MailStateDto getCurrentStatus(Long mailId) throws BadRequestException {
 
         MailStateEntity mailStateEntity = mailStateRepo.findLastByMailId(mailId);
+        if (mailStateEntity == null) throw new BadRequestException("Invalid mail Id");
 
         return MailStateDto.builder()
                 .mailStateType(mailStateEntity.getMailStateType())
@@ -66,7 +65,7 @@ public class MailServiceImpl implements MailService {
     }
 
     @Override
-    public List<MailStateDto> getMailHistory(Long mailId) {
+    public List<MailStateDto> getMailHistory(Long mailId) throws BadRequestException {
         MailEntity mail = mailRepo
                 .findById(mailId)
                 .orElseThrow(() -> new BadRequestException("Invalid mail id"));
@@ -83,24 +82,20 @@ public class MailServiceImpl implements MailService {
 
     @Override
     @Transactional
-    public MailStateDto changeMailState(Long mailId, MailStateType newState, Optional<Long> postId) {
+    public MailStateDto changeMailState (Long mailId, MailStateType newState, Optional<Long> postId) throws BadRequestException {
 
+        PostEntity postEntity = postId.isPresent()
+                ? postRepo
+                    .findById(postId.get())
+                    .orElseThrow(() -> new BadRequestException("Invalid post id"))
+                : null;
 
         MailStateEntity mailState = MailStateEntity.builder()
                 .mailEntity(mailRepo
                         .findById(mailId)
-                        .orElseThrow(() -> new BadRequestException("Invalid id")))
-                .mailStateType(newState)
-                .postEntity(postId
-                        .map(
-                                id ->
-                        postRepo
-                                .findById(id)
-                                .orElseThrow(() -> new BadRequestException("Invalid post id")))
-                        .orElse(null))
-                .mailEntity(mailRepo
-                        .findById(mailId)
                         .orElseThrow(() -> new BadRequestException("Invalid mail id")))
+                .mailStateType(newState)
+                .postEntity(postEntity)
                 .build();
 
         MailStateEntity savedMailState = mailStateRepo.saveAndFlush(mailState);

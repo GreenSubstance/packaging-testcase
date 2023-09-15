@@ -1,6 +1,8 @@
 package com.skyeng.testcase.api.service;
 
+import com.skyeng.testcase.api.dto.MailDto;
 import com.skyeng.testcase.api.dto.MailStateDto;
+import com.skyeng.testcase.api.exceptions.BadRequestException;
 import com.skyeng.testcase.api.repositories.MailRepo;
 import com.skyeng.testcase.api.repositories.MailStateRepo;
 import com.skyeng.testcase.api.repositories.PostRepo;
@@ -31,12 +33,11 @@ class MailServiceImplTest {
 
 
     private MailStateRepo mailStateRepo;
-
     private MailRepo mailRepo;
-
     private PostRepo postRepo;
-
     private MailService mailService;
+
+    private MailEntity commonMail;
 
     @BeforeEach
     void setup() {
@@ -44,82 +45,71 @@ class MailServiceImplTest {
         mailRepo = Mockito.mock(MailRepo.class);
         postRepo = Mockito.mock(PostRepo.class);
         mailService = new MailServiceImpl(mailRepo, mailStateRepo, postRepo);
-    }
 
-    @Autowired
-    TestEntityManager entityManager;
+        commonMail = MailEntity.builder()
+                .mailType(MailType.PARCEL)
+                .recipientAddress("ad")
+                .recipientIndex(111)
+                .recipientName("joe")
+                .build();
+    }
 
     @Test
     void shouldRegisterMail() {
 
-
-        MailEntity expectedMail = MailEntity.builder()
-                .mailType(MailType.PARCEL)
-                .recipientAddress("ad")
-                .recipientIndex(111)
-                .recipientName("joe")
+        MailDto mailDto = MailDto.builder()
+                .mailType(commonMail.getMailType())
+                .address(commonMail.getRecipientAddress())
+                .index(commonMail.getRecipientIndex())
+                .name(commonMail.getRecipientName())
                 .build();
 
 
-        MailEntity actualMail = mailService.registerMail(MailType.PARCEL, 111,"ad",  "joe");
+        MailEntity actualMail = mailService.registerMail(mailDto);
 
-        assertThat(actualMail.getMailType()).isEqualTo(expectedMail.getMailType());
-        assertThat(actualMail.getRecipientAddress()).isEqualTo(expectedMail.getRecipientAddress());
-        assertThat(actualMail.getRecipientIndex()).isEqualTo(expectedMail.getRecipientIndex());
-        assertThat(actualMail.getRecipientName()).isEqualTo(expectedMail.getRecipientName());
-
+        assertThat(actualMail.getMailType()).isEqualTo(commonMail.getMailType());
+        assertThat(actualMail.getRecipientAddress()).isEqualTo(commonMail.getRecipientAddress());
+        assertThat(actualMail.getRecipientIndex()).isEqualTo(commonMail.getRecipientIndex());
+        assertThat(actualMail.getRecipientName()).isEqualTo(commonMail.getRecipientName());
 
     }
 
     @Test
-    void getCurrentStatus() {
+    void shouldGetCurrentStatus() throws BadRequestException {
 
-        MailEntity mail = MailEntity.builder()
-                .mailType(MailType.PARCEL)
-                .recipientAddress("ad")
-                .recipientIndex(111)
-                .recipientName("joe")
-                .build();
+        Long mailId = 1L;
 
         MailStateEntity mailState = MailStateEntity.builder()
-                .mailEntity(mail)
+                .mailEntity(commonMail)
                 .postEntity(null)
                 .mailStateType(MailStateType.ARRIVED)
                 .build();
 
-        when(mailStateRepo.findLastByMailId(Mockito.any())).thenReturn(mailState);
+        when(mailStateRepo.findLastByMailId(mailId)).thenReturn(mailState);
 
-        MailStateDto actualMailStateDto = mailService.getCurrentStatus(1L);
+        MailStateDto actualMailStateDto = mailService.getCurrentStatus(mailId);
 
         assertThat(mailState.getMailStateType()).isEqualTo(actualMailStateDto.getMailStateType());
     }
 
     @Test
-    void getMailHistory() {
-        MailEntity mail = MailEntity.builder()
-                .mailType(MailType.PARCEL)
-                .recipientAddress("ad")
-                .recipientIndex(111)
-                .recipientName("joe")
-                .build();
+    void shouldGetMailHistory() throws BadRequestException {
 
-        when(mailRepo.findById(Mockito.any())).thenReturn(Optional.ofNullable(mail));
+        Long mailId = 1L;
 
-        List<MailStateDto> returnedHistory = mailService.getMailHistory(1L);
+        when(mailRepo.findById(mailId)).thenReturn(Optional.ofNullable(commonMail));
+
+        List<MailStateDto> returnedHistory = mailService.getMailHistory(mailId);
         assertThat(returnedHistory).isNotNull();
     }
 
     @Test
-    void changeMailState() {
-        MailEntity mail = MailEntity.builder()
-                .mailType(MailType.PARCEL)
-                .recipientAddress("ad")
-                .recipientIndex(111)
-                .recipientName("joe")
-                .build();
+    void shouldChangeMailState() throws BadRequestException {
+
+        Long mailId = 1L;
 
         MailStateEntity mailState = MailStateEntity.builder()
-                .mailEntity(mail)
+                .mailEntity(commonMail)
                 .postEntity(null)
                 .mailStateType(MailStateType.ARRIVED)
                 .build();
@@ -130,8 +120,8 @@ class MailServiceImplTest {
                 .mailState(null)
                 .build();
 
-        when(mailRepo.findById(Mockito.any())).thenReturn(Optional.ofNullable(mail));
-        when(postRepo.findById(Mockito.any())).thenReturn(Optional.ofNullable(postEntity));
+        when(mailRepo.findById(mailId)).thenReturn(Optional.ofNullable(commonMail));
+        when(postRepo.findById(1L)).thenReturn(Optional.ofNullable(postEntity));
         when(mailStateRepo.saveAndFlush(Mockito.any())).thenReturn(mailState);
 
         MailStateDto mailStateDto = mailService.changeMailState(1L, MailStateType.ARRIVED, Optional.of(1L));

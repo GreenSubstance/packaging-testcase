@@ -1,6 +1,8 @@
 package com.skyeng.testcase.api.service;
 
+import com.skyeng.testcase.api.dto.MailDto;
 import com.skyeng.testcase.api.dto.MailStateDto;
+import com.skyeng.testcase.api.exceptions.BadRequestException;
 import com.skyeng.testcase.model.MailEntity;
 import com.skyeng.testcase.model.MailStateEntity;
 import com.skyeng.testcase.model.MailStateType;
@@ -12,9 +14,9 @@ import java.util.Optional;
 
 @Service
 public interface MailService {
-    MailEntity registerMail(MailType mailType, int recipientIndex, String recipientAddress, String recipientName);
-    MailStateDto getCurrentStatus(Long mail_id);
-    List<MailStateDto> getMailHistory(Long mailId);
+    MailEntity registerMail(MailDto mailDto);
+    MailStateDto getCurrentStatus(Long mail_id) throws BadRequestException;
+    List<MailStateDto> getMailHistory(Long mailId) throws BadRequestException;
 
-    MailStateDto changeMailState(Long mailId, MailStateType newState, Optional<Long> postId);
+    MailStateDto changeMailState(Long mailId, MailStateType newState, Optional<Long> postId) throws BadRequestException;
 }
